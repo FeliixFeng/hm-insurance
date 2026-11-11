@@ -13,8 +13,11 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
-.ipynb_checkpoints/
 *.egg-info/
+
+# ---------- Jupyter（本地炼丹用，不入库：输出里会带 API Key / 数据库密码） ----------
+.ipynb_checkpoints/
+agent-service/notebooks/
 
 # ---------- Node ----------
 node_modules/
