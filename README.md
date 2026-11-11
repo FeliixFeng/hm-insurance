@@ -72,3 +72,7 @@ npm run dev
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | PostgreSQL 连接信息 |
 | `DEEPSEEK_API_KEY` | 大模型 API Key |
 | `CHAT_MODEL` | 对话模型名 |
+
+## 课程文档
+
+- AI智能应用开发课程（第三阶段 Agent/RAG/LangGraph）：https://my.feishu.cn/wiki/WVZWw92BHi5TJ6kOZ5EcGiMunec
