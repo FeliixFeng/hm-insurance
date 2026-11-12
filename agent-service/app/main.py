@@ -1,11 +1,14 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.exceptions import ApplicationError
 from app.core.logging import configure_logging, get_logger
 import uvicorn
 
+from app.modules.chat_thread.exceptions import ChatThreadNotFoundError
 
 # 日志配置
 configure_logging(settings.logging.level)
@@ -32,15 +35,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.exception_handler(ApplicationError)
+async def handle_application_error(
+    request: Request,
+    exc: ApplicationError, # 捕获到的异常（这里用自定义异常基类捕获，所有业务异常都会匹配到）
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code, # 异常中自带status
+        content={
+            "code": exc.code,        # 异常中自带code
+            "message": exc.message,  # 异常中自带message
+        },
+    )
+
+
 
 from app.modules.product.router import router as product_router
+from app.modules.chat_thread.router import router as chat_thread_router
 app.include_router(product_router)
+app.include_router(chat_thread_router)
 
 @app.get("/healthy", summary="健康检测接口")
 async def healthy() -> dict[str, str]:
     logger.info("健康检测接口正常调用。")
     return {"status": "ok"}
-
 
 
 if __name__ == "__main__":
