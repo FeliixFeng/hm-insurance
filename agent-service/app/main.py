@@ -1,3 +1,4 @@
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -8,8 +9,6 @@ from app.core.exceptions import ApplicationError
 from app.core.logging import configure_logging, get_logger
 import uvicorn
 
-from app.modules.chat_thread.exceptions import ChatThreadNotFoundError
-
 # 日志配置
 configure_logging(settings.logging.level)
 logger = get_logger(__name__)
@@ -18,14 +17,24 @@ logger = get_logger(__name__)
 # 初始话生命周期钩子
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("项目启动中， 正在初始化。。。")
+    logger.info("项目启动中， 正在初始化...")
     from app.infra.database import check_database, close_database
+    from app.infra.checkpointer import init_checkpointer, close_checkpointer
+    from app.agents.insurance_advisor import init_insurance_agent
+
     try:
+        # 1.检查业务数据库连接
         await check_database()
+        # 2.初始化Checkpointer
+        checkpointer = await init_checkpointer()
+        # 3.初始化保险顾问Agent, 保存到全局State中
+        app.state.agent = init_insurance_agent(checkpointer)
 
         yield
     finally:
+        logger.info("应用关闭中...")
         await close_database()
+        await close_checkpointer()
 
 
 # 初始化FastAPI
@@ -49,11 +58,12 @@ async def handle_application_error(
     )
 
 
-
+from app.modules.chat.router import router as chat_router
 from app.modules.product.router import router as product_router
 from app.modules.chat_thread.router import router as chat_thread_router
 app.include_router(product_router)
 app.include_router(chat_thread_router)
+app.include_router(chat_router)
 
 @app.get("/healthy", summary="健康检测接口")
 async def healthy() -> dict[str, str]:
@@ -66,5 +76,6 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.app.host,
         port=settings.app.port,
-        reload=False
+        reload=False,
+        loop="asyncio:SelectorEventLoop" if sys.platform == "win32" else "auto",
     )
